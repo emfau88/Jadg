@@ -1,0 +1,1665 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Waidmannsheil – Endless Jagd</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            background: #1a3009;
+            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+        }
+
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .top-ui {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 8px;
+            pointer-events: auto;
+        }
+
+        .left-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .score-box {
+            background: linear-gradient(145deg, #8B4513, #A0522D);
+            border: 2px solid #FFD700;
+            border-radius: 10px;
+            padding: 6px 12px;
+            color: #FFD700;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .level-box {
+            background: linear-gradient(145deg, #2c3e50, #34495e);
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            padding: 4px 8px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .target-box {
+            background: linear-gradient(145deg, #27ae60, #2ecc71);
+            border: 1px solid #f39c12;
+            border-radius: 6px;
+            padding: 3px 6px;
+            color: #fff;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .health-bar {
+            font-size: 16px;
+            letter-spacing: -2px;
+        }
+
+        .wind-box {
+            background: rgba(255,255,255,0.9);
+            border: 2px solid #3498db;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .bottom-ui {
+            height: 10%;
+            background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            pointer-events: auto;
+            gap: 10px;
+        }
+
+        .ammo-display-bottom {
+            background: linear-gradient(145deg, #2c3e50, #34495e);
+            border: 1px solid #95a5a6;
+            border-radius: 8px;
+            padding: 4px 8px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .ammo-bullet {
+            font-size: 10px;
+            opacity: 0.3;
+            transition: opacity 0.2s;
+        }
+
+        .ammo-bullet.active {
+            opacity: 1;
+        }
+
+        .reload-btn {
+            background: linear-gradient(145deg, #e67e22, #d35400);
+            border: 2px solid #f39c12;
+            border-radius: 10px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+            transition: all 0.1s;
+            font-family: inherit;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .reload-btn:active {
+            transform: scale(0.95);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .reload-btn.disabled {
+            opacity: 0.6;
+        }
+
+        .menu-screen, .game-over-screen, .level-complete-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #2d5016 0%, #1a3009 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            z-index: 100;
+            pointer-events: auto;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .menu-screen.hidden, .game-over-screen.hidden, .level-complete-screen.hidden {
+            display: none;
+        }
+
+        .game-title {
+            font-size: 42px;
+            color: #FFD700;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
+            margin-top: 10px;
+            margin-bottom: 5px;
+            text-align: center;
+            line-height: 1.1;
+            font-weight: bold;
+        }
+
+        .game-subtitle {
+            font-size: 18px;
+            color: #90EE90;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+            font-style: italic;
+        }
+
+        .start-btn, .restart-btn, .next-level-btn {
+            background: linear-gradient(145deg, #FFD700, #FFA500);
+            border: 3px solid #FF8C00;
+            border-radius: 20px;
+            padding: 15px 40px;
+            font-size: 22px;
+            font-weight: bold;
+            color: #8B4513;
+            cursor: pointer;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.5);
+            transition: all 0.2s;
+            font-family: inherit;
+            margin: 10px 0;
+        }
+
+        .start-btn:active, .restart-btn:active, .next-level-btn:active {
+            transform: scale(0.95);
+        }
+
+        .next-level-btn {
+            background: linear-gradient(145deg, #2ecc71, #27ae60);
+            border-color: #1e8449;
+            color: #fff;
+        }
+
+        .instructions {
+            margin-top: 15px;
+            color: #fff;
+            text-align: left;
+            font-size: 14px;
+            line-height: 1.6;
+            padding: 15px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 15px;
+            max-width: 95%;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .instructions h3 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #FFD700;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .instructions ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .instructions li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+            font-size: 13px;
+        }
+
+        .instructions li:before {
+            content: "▶";
+            position: absolute;
+            left: 0;
+            color: #FFD700;
+            font-size: 12px;
+        }
+
+        .instructions strong {
+            color: #FFD700;
+        }
+
+        .final-score {
+            font-size: 42px;
+            color: #FFD700;
+            margin: 10px 0;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+        }
+
+        .high-score {
+            font-size: 18px;
+            color: #90EE90;
+            margin-bottom: 20px;
+        }
+
+        .level-stats {
+            background: rgba(0,0,0,0.4);
+            border-radius: 15px;
+            padding: 15px;
+            margin: 10px 0;
+            text-align: center;
+            color: #fff;
+            border: 2px solid rgba(255,215,0,0.3);
+        }
+
+        .level-stats h3 {
+            color: #FFD700;
+            margin-bottom: 8px;
+            font-size: 20px;
+        }
+
+        .sound-toggle {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.7);
+            border: 2px solid #fff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 101;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .combo-display {
+            position: absolute;
+            top: 35%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 42px;
+            font-weight: bold;
+            color: #e74c3c;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
+            pointer-events: none;
+            opacity: 0;
+            z-index: 50;
+            text-align: center;
+        }
+
+        .combo-display.show {
+            animation: comboAnim 1s ease-out;
+        }
+
+        @keyframes comboAnim {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.3); }
+            80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .laugh-overlay {
+            position: absolute;
+            font-size: 28px;
+            font-weight: bold;
+            color: #e74c3c;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
+            pointer-events: none;
+            z-index: 60;
+            animation: laughAnim 0.5s ease-in-out infinite;
+        }
+
+        @keyframes laughAnim {
+            0%, 100% { transform: rotate(-10deg) scale(1); }
+            50% { transform: rotate(10deg) scale(1.1); }
+        }
+
+        .escaped-warning {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 32px;
+            font-weight: bold;
+            color: #e74c3c;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
+            pointer-events: none;
+            z-index: 55;
+            animation: warningPulse 1s ease-out;
+        }
+
+        @keyframes warningPulse {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .muzzle-flash {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, #ffff00 0%, #ff8800 40%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 45;
+            animation: flashAnim 0.1s ease-out forwards;
+        }
+
+        @keyframes flashAnim {
+            0% { transform: scale(0.5); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        .kamikaze-indicator {
+            position: absolute;
+            font-size: 24px;
+            font-weight: bold;
+            color: #e74c3c;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
+            pointer-events: none;
+            z-index: 65;
+            animation: pulseIndicator 0.5s ease-in-out infinite;
+        }
+
+        @keyframes pulseIndicator {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+
+        .warning-text {
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            font-weight: bold;
+            color: #e74c3c;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
+            pointer-events: none;
+            z-index: 70;
+            animation: warningTextAnim 2s ease-out;
+        }
+
+        @keyframes warningTextAnim {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="canvas"></canvas>
+
+        <div class="ui-layer" id="gameUI" style="display: none;">
+            <div class="top-ui">
+                <div class="left-stats">
+                    <div class="stat-row">
+                        <div class="score-box">🏆 <span id="score">0</span></div>
+                        <div class="wind-box" id="windBox">💨</div>
+                    </div>
+                    <div class="stat-row">
+                        <div class="health-bar" id="healthBar">❤️❤️❤️❤️❤️</div>
+                    </div>
+                    <div class="stat-row">
+                        <div class="level-box">Lv<span id="levelNum">1</span></div>
+                        <div class="target-box">Ziel: <span id="targetScore">3000</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="combo-display" id="comboDisplay">
+                🔥 COMBO x<span id="comboNum">2</span>!
+            </div>
+
+            <div class="bottom-ui">
+                <div class="ammo-display-bottom" id="ammoDisplayBottom">
+                    <span class="ammo-bullet active" id="bullet1">🔴</span>
+                    <span class="ammo-bullet active" id="bullet2">🔴</span>
+                    <span class="ammo-bullet active" id="bullet3">🔴</span>
+                    <span class="ammo-bullet active" id="bullet4">🔴</span>
+                    <span class="ammo-bullet active" id="bullet5">🔴</span>
+                </div>
+                <button class="reload-btn" id="reloadBtn">🔄 LADEN</button>
+            </div>
+        </div>
+
+        <button class="sound-toggle" id="soundToggle">🔊</button>
+
+        <div class="menu-screen" id="menuScreen">
+            <div class="game-title">🦌<br>Waidmanns<br>heil</div>
+            <div class="game-subtitle">Hochsitz-Chaos im Allgäu 🏔️</div>
+            <button class="start-btn" id="startBtn">🎯 Los geht's!</button>
+
+            <div class="instructions">
+                <h3>🎮 So geht's:</h3>
+                <ul>
+                    <li>Tippe auf Tiere zum Schießen</li>
+                    <li>Beachte den Wind 💨</li>
+                    <li>🔄 rechtzeitig nachladen!</li>
+                    <li>Schnelle Treffer = Combo 🔥</li>
+                    <li>Nicht entkommen lassen! 💔</li>
+                    <li>⚠️ Achtung: Kamikaze-Schweine!</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="level-complete-screen hidden" id="levelCompleteScreen">
+            <div class="game-title">🎉<br>Level<br>geschafft!</div>
+            <div class="level-stats">
+                <h3>Level <span id="completedLevel">1</span></h3>
+                <div style="font-size: 16px; margin: 8px 0;">
+                    <span id="levelScore" style="color: #FFD700; font-size: 28px; font-weight: bold;">0</span> Punkte
+                </div>
+                <div style="font-size: 12px; color: #90EE90;">
+                    Erlegt: <span id="animalsHunted">0</span> | Leben: <span id="livesLeft">0</span>/5
+                </div>
+            </div>
+            <button class="next-level-btn" id="nextLevelBtn">➡️ Weiter</button>
+        </div>
+
+        <div class="game-over-screen hidden" id="gameOverScreen">
+            <div class="game-title" id="gameOverTitle">🍺<br>O'zapft<br>is!</div>
+            <div class="final-score" id="finalScore">0</div>
+            <div class="high-score">🏆 <span id="highScore">0</span></div>
+            <div class="level-stats" id="gameOverStats" style="display: none;">
+                <div style="font-size: 14px;">
+                    Level <span id="finalLevel">1</span> | Tiere: <span id="finalAnimals">0</span>
+                </div>
+            </div>
+            <button class="restart-btn" id="restartBtn">🔄 Nochmal!</button>
+        </div>
+    </div>
+
+    <script>
+        // Audio Context
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+        let soundEnabled = true;
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new AudioContext();
+        }
+
+        function playSound(type, delay = 0) {
+            if (!soundEnabled || !audioCtx) return;
+
+            const now = audioCtx.currentTime + delay;
+
+            switch(type) {
+                case 'shoot':
+                    const shootOsc = audioCtx.createOscillator();
+                    const shootGain = audioCtx.createGain();
+                    shootOsc.connect(shootGain);
+                    shootGain.connect(audioCtx.destination);
+                    shootOsc.type = 'sawtooth';
+                    shootOsc.frequency.setValueAtTime(300, now);
+                    shootOsc.frequency.exponentialRampToValueAtTime(50, now + 0.15);
+                    shootGain.gain.setValueAtTime(0.4, now);
+                    shootGain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    shootOsc.start(now);
+                    shootOsc.stop(now + 0.15);
+                    break;
+
+                case 'reload':
+                    const relOsc = audioCtx.createOscillator();
+                    const relGain = audioCtx.createGain();
+                    relOsc.connect(relGain);
+                    relGain.connect(audioCtx.destination);
+                    relOsc.type = 'square';
+                    relOsc.frequency.setValueAtTime(800, now);
+                    relGain.gain.setValueAtTime(0.3, now);
+                    relGain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                    relOsc.start(now);
+                    relOsc.stop(now + 0.05);
+
+                    const relOsc2 = audioCtx.createOscillator();
+                    const relGain2 = audioCtx.createGain();
+                    relOsc2.connect(relGain2);
+                    relGain2.connect(audioCtx.destination);
+                    relOsc2.type = 'square';
+                    relOsc2.frequency.setValueAtTime(600, now + 0.08);
+                    relGain2.gain.setValueAtTime(0.3, now + 0.08);
+                    relGain2.gain.exponentialRampToValueAtTime(0.01, now + 0.13);
+                    relOsc2.start(now + 0.08);
+                    relOsc2.stop(now + 0.13);
+
+                    const relOsc3 = audioCtx.createOscillator();
+                    const relGain3 = audioCtx.createGain();
+                    relOsc3.connect(relGain3);
+                    relGain3.connect(audioCtx.destination);
+                    relOsc3.type = 'square';
+                    relOsc3.frequency.setValueAtTime(1000, now + 0.15);
+                    relGain3.gain.setValueAtTime(0.2, now + 0.15);
+                    relGain3.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    relOsc3.start(now + 0.15);
+                    relOsc3.stop(now + 0.2);
+                    break;
+
+                case 'hit':
+                    const hitOsc = audioCtx.createOscillator();
+                    const hitGain = audioCtx.createGain();
+                    hitOsc.connect(hitGain);
+                    hitGain.connect(audioCtx.destination);
+                    hitOsc.type = 'sine';
+                    hitOsc.frequency.setValueAtTime(600, now);
+                    hitOsc.frequency.setValueAtTime(800, now + 0.1);
+                    hitOsc.frequency.setValueAtTime(400, now + 0.2);
+                    hitGain.gain.setValueAtTime(0.24, now);
+                    hitGain.gain.linearRampToValueAtTime(0, now + 0.3);
+                    hitOsc.start(now);
+                    hitOsc.stop(now + 0.3);
+                    break;
+
+                case 'empty':
+                    for (let i = 0; i < 3; i++) {
+                        const clickOsc = audioCtx.createOscillator();
+                        const clickGain = audioCtx.createGain();
+                        clickOsc.connect(clickGain);
+                        clickGain.connect(audioCtx.destination);
+                        clickOsc.type = 'square';
+                        clickOsc.frequency.setValueAtTime(800 + i * 200, now + i * 0.05);
+                        clickGain.gain.setValueAtTime(0.2, now + i * 0.05);
+                        clickGain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.05 + 0.08);
+                        clickOsc.start(now + i * 0.05);
+                        clickOsc.stop(now + i * 0.05 + 0.08);
+                    }
+                    break;
+
+                case 'laugh':
+                    for (let i = 0; i < 6; i++) {
+                        const lOsc = audioCtx.createOscillator();
+                        const lGain = audioCtx.createGain();
+                        lOsc.connect(lGain);
+                        lGain.connect(audioCtx.destination);
+                        lOsc.type = 'sawtooth';
+                        lOsc.frequency.setValueAtTime(300 + Math.random() * 200, now + i * 0.1);
+                        lGain.gain.setValueAtTime(0.15, now + i * 0.1);
+                        lGain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.1 + 0.08);
+                        lOsc.start(now + i * 0.1);
+                        lOsc.stop(now + i * 0.1 + 0.08);
+                    }
+                    break;
+
+                case 'damage':
+                    const dmgOsc = audioCtx.createOscillator();
+                    const dmgGain = audioCtx.createGain();
+                    dmgOsc.connect(dmgGain);
+                    dmgGain.connect(audioCtx.destination);
+                    dmgOsc.type = 'sawtooth';
+                    dmgOsc.frequency.setValueAtTime(150, now);
+                    dmgOsc.frequency.exponentialRampToValueAtTime(50, now + 0.3);
+                    dmgGain.gain.setValueAtTime(0.4, now);
+                    dmgGain.gain.linearRampToValueAtTime(0, now + 0.3);
+                    dmgOsc.start(now);
+                    dmgOsc.stop(now + 0.3);
+                    break;
+
+                case 'combo':
+                    const comboOsc = audioCtx.createOscillator();
+                    const comboGain = audioCtx.createGain();
+                    comboOsc.connect(comboGain);
+                    comboGain.connect(audioCtx.destination);
+                    comboOsc.type = 'square';
+                    comboOsc.frequency.setValueAtTime(523, now);
+                    comboOsc.frequency.setValueAtTime(659, now + 0.1);
+                    comboOsc.frequency.setValueAtTime(784, now + 0.2);
+                    comboGain.gain.setValueAtTime(0.3, now);
+                    comboGain.gain.linearRampToValueAtTime(0, now + 0.4);
+                    comboOsc.start(now);
+                    comboOsc.stop(now + 0.4);
+                    break;
+
+                case 'levelUp':
+                    for (let i = 0; i < 3; i++) {
+                        const lOsc = audioCtx.createOscillator();
+                        const lGain = audioCtx.createGain();
+                        lOsc.connect(lGain);
+                        lGain.connect(audioCtx.destination);
+                        lOsc.type = 'square';
+                        lOsc.frequency.setValueAtTime(440 + i * 110, now + i * 0.15);
+                        lGain.gain.setValueAtTime(0.3, now + i * 0.15);
+                        lGain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.15 + 0.2);
+                        lOsc.start(now + i * 0.15);
+                        lOsc.stop(now + i * 0.15 + 0.2);
+                    }
+                    break;
+
+                case 'gameOver':
+                    const goOsc = audioCtx.createOscillator();
+                    const goGain = audioCtx.createGain();
+                    goOsc.connect(goGain);
+                    goGain.connect(audioCtx.destination);
+                    goOsc.type = 'sawtooth';
+                    goOsc.frequency.setValueAtTime(200, now);
+                    goOsc.frequency.exponentialRampToValueAtTime(50, now + 0.8);
+                    goGain.gain.setValueAtTime(0.4, now);
+                    goGain.gain.linearRampToValueAtTime(0, now + 0.8);
+                    goOsc.start(now);
+                    goOsc.stop(now + 0.8);
+                    break;
+
+                case 'duck':
+                    const duckOsc = audioCtx.createOscillator();
+                    const duckGain = audioCtx.createGain();
+                    duckOsc.connect(duckGain);
+                    duckGain.connect(audioCtx.destination);
+                    duckOsc.type = 'sawtooth';
+                    duckOsc.frequency.setValueAtTime(600, now);
+                    duckOsc.frequency.exponentialRampToValueAtTime(400, now + 0.15);
+                    duckGain.gain.setValueAtTime(0.36, now);
+                    duckGain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    duckOsc.start(now);
+                    duckOsc.stop(now + 0.15);
+                    break;
+
+                case 'turkey':
+                    for (let i = 0; i < 4; i++) {
+                        const turkeyOsc = audioCtx.createOscillator();
+                        const turkeyGain = audioCtx.createGain();
+                        turkeyOsc.connect(turkeyGain);
+                        turkeyGain.connect(audioCtx.destination);
+                        turkeyOsc.type = 'sawtooth';
+                        turkeyOsc.frequency.setValueAtTime(150, now + i * 0.08);
+                        turkeyOsc.frequency.exponentialRampToValueAtTime(100, now + i * 0.08 + 0.06);
+                        turkeyGain.gain.setValueAtTime(0.3, now + i * 0.08);
+                        turkeyGain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.08 + 0.06);
+                        turkeyOsc.start(now + i * 0.08);
+                        turkeyOsc.stop(now + i * 0.08 + 0.06);
+                    }
+                    break;
+
+                case 'deer':
+                    const deerOsc = audioCtx.createOscillator();
+                    const deerGain = audioCtx.createGain();
+                    deerOsc.connect(deerGain);
+                    deerGain.connect(audioCtx.destination);
+                    deerOsc.type = 'sine';
+                    deerOsc.frequency.setValueAtTime(800, now);
+                    deerOsc.frequency.setValueAtTime(1000, now + 0.1);
+                    deerOsc.frequency.exponentialRampToValueAtTime(600, now + 0.25);
+                    deerGain.gain.setValueAtTime(0.36, now);
+                    deerGain.gain.linearRampToValueAtTime(0, now + 0.25);
+                    deerOsc.start(now);
+                    deerOsc.stop(now + 0.25);
+                    break;
+
+                case 'hog':
+                    const hogOsc = audioCtx.createOscillator();
+                    const hogGain = audioCtx.createGain();
+                    hogOsc.connect(hogGain);
+                    hogGain.connect(audioCtx.destination);
+                    hogOsc.type = 'sawtooth';
+                    hogOsc.frequency.setValueAtTime(180, now);
+                    hogOsc.frequency.exponentialRampToValueAtTime(120, now + 0.2);
+                    hogGain.gain.setValueAtTime(0.42, now);
+                    hogGain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    hogOsc.start(now);
+                    hogOsc.stop(now + 0.2);
+                    
+                    const hogOsc2 = audioCtx.createOscillator();
+                    const hogGain2 = audioCtx.createGain();
+                    hogOsc2.connect(hogGain2);
+                    hogGain2.connect(audioCtx.destination);
+                    hogOsc2.type = 'sawtooth';
+                    hogOsc2.frequency.setValueAtTime(160, now + 0.15);
+                    hogOsc2.frequency.exponentialRampToValueAtTime(100, now + 0.35);
+                    hogGain2.gain.setValueAtTime(0.36, now + 0.15);
+                    hogGain2.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                    hogOsc2.start(now + 0.15);
+                    hogOsc2.stop(now + 0.35);
+                    break;
+
+                case 'kamikaze':
+                    const kamOsc = audioCtx.createOscillator();
+                    const kamGain = audioCtx.createGain();
+                    kamOsc.connect(kamGain);
+                    kamGain.connect(audioCtx.destination);
+                    kamOsc.type = 'sawtooth';
+                    kamOsc.frequency.setValueAtTime(200, now);
+                    kamOsc.frequency.linearRampToValueAtTime(600, now + 1.5);
+                    kamGain.gain.setValueAtTime(0.4, now);
+                    kamGain.gain.linearRampToValueAtTime(0.01, now + 1.5);
+                    kamOsc.start(now);
+                    kamOsc.stop(now + 1.5);
+                    break;
+            }
+        }
+
+        // Canvas Setup
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('gameContainer');
+
+        function resize() {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = container.getBoundingClientRect();
+            
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+            
+            ctx.scale(dpr, dpr);
+            
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+        }
+        
+        resize();
+        window.addEventListener('resize', resize);
+
+        // Assets
+        const ASSETS = {
+            background: 'https://raw.githubusercontent.com/emfau88/Jadg/refs/heads/main/Hintergrund2.png',
+            hunter: 'https://raw.githubusercontent.com/emfau88/Jadg/main/hunter2.png',
+            duck: 'https://raw.githubusercontent.com/emfau88/Jadg/main/duck.png',
+            hog: 'https://raw.githubusercontent.com/emfau88/Jadg/main/hog.png',
+            deer: 'https://raw.githubusercontent.com/emfau88/Jadg/main/reh.png',
+            turkey: 'https://raw.githubusercontent.com/emfau88/Jadg/main/truthahn.png'
+        };
+
+        const images = {};
+        let assetsLoaded = false;
+
+        function loadImage(name, url) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                    images[name] = img;
+                    resolve(true);
+                };
+                img.onerror = () => resolve(false);
+                img.src = url;
+            });
+        }
+
+        async function loadAllAssets() {
+            const results = await Promise.all(
+                Object.entries(ASSETS).map(([name, url]) => loadImage(name, url))
+            );
+            assetsLoaded = results.every(r => r);
+            return assetsLoaded;
+        }
+
+        // Spiel-Variablen
+        let gameRunning = false;
+        let score = 0;
+        let highScore = localStorage.getItem('waidmannsheil_highscore') || 0;
+        let ammo = 5;
+        let maxAmmo = 5;
+        let combo = 0;
+        let lastHitTime = 0;
+        let windDirection = 0;
+        let windStrength = 0;
+        let health = 5;
+        let gameTime = 0;
+        let invulnerable = 0;
+        let hogCounter = 0;
+        
+        let currentLevel = 1;
+        let targetScore = 3000;
+        let animalsHunted = 0;
+        let animalsEscaped = 0;
+        let levelSpeedMultiplier = 1.2;
+        let spawnRate = 270;
+
+        let animals = [];
+        let particles = [];
+        let floatingTexts = [];
+
+        let standX = 0;
+        let standY = 0;
+        let standShake = 0;
+        let safeZoneY = 0;
+
+        // Tiere - Ente 15% weiter runter
+        const animalTypes = [
+            { name: 'duck', image: 'duck', speed: 0.9, score: 100, health: 1, yRange: [0.20, 0.35], scale: 0.84, type: 'flying', sound: 'duck' },
+            { name: 'turkey', image: 'turkey', speed: 0.7, score: 125, health: 1, yRange: [0.45, 0.65], scale: 0.96, type: 'ground', sound: 'turkey' },
+            { name: 'deer', image: 'deer', speed: 0.6, score: 150, health: 1, yRange: [0.50, 0.70], scale: 1.08, type: 'ground', sound: 'deer' },
+            { name: 'hog', image: 'hog', speed: 0.5, score: 250, health: 2, yRange: [0.55, 0.75], scale: 1.2, type: 'ground', sound: 'hog' }
+        ];
+
+        class Animal {
+            constructor() {
+                const type = animalTypes[Math.floor(Math.random() * animalTypes.length)];
+                this.type = type;
+                this.imageName = type.image;
+                this.soundType = type.sound;
+                
+                const screenWidth = canvas.width / (window.devicePixelRatio || 1);
+                const screenHeight = canvas.height / (window.devicePixelRatio || 1);
+                
+                // Kamikaze-Logik für Wildschweine
+                this.isKamikaze = false;
+                if (type.name === 'hog') {
+                    hogCounter++;
+                    if (hogCounter % 3 === 0) {
+                        this.isKamikaze = true;
+                    }
+                }
+                
+                // Seitlicher Spawn wie normale Tiere
+                this.x = Math.random() < 0.5 ? -120 : screenWidth + 120;
+                
+                const minY = screenHeight * type.yRange[0];
+                const maxY = Math.min(screenHeight * type.yRange[1], safeZoneY - 120);
+                this.y = minY + Math.random() * (maxY - minY);
+                
+                const speedMultiplier = levelSpeedMultiplier * (0.7 + Math.random() * 0.3);
+                
+                if (this.isKamikaze) {
+                    // Kamikaze: Bewegt sich auf Hochsitz zu mit Zickzack
+                    this.vx = (this.x < 0 ? 1 : -1) * type.speed * speedMultiplier;
+                    this.baseVx = this.vx;
+                    this.vy = 0;
+                    this.zigzagTimer = 0;
+                    this.targetX = standX;
+                    this.targetY = standY;
+                    
+                    playSound('kamikaze');
+                    showWarningText('⚠️ KAMIKAZE!');
+                } else {
+                    this.vx = (this.x < 0 ? 1 : -1) * type.speed * speedMultiplier;
+                    this.vy = 0;
+                }
+                
+                this.width = 84 * type.scale;
+                this.height = 84 * type.scale;
+                this.health = type.health;
+                this.maxHealth = type.health;
+                this.state = 'alive';
+                this.laughTimer = 0;
+                this.hitFlash = 0;
+                this.hasLaughed = false;
+                this.laughElement = null;
+                this.indicatorElement = null;
+                this.escaped = false;
+            }
+
+            update() {
+                if (this.laughElement && this.state !== 'laughing') {
+                    this.laughElement.remove();
+                    this.laughElement = null;
+                }
+
+                if (this.state === 'hit') {
+                    this.y -= 0.8;
+                    this.width *= 0.97;
+                    this.height *= 0.97;
+                    if (this.indicatorElement) {
+                        this.indicatorElement.remove();
+                        this.indicatorElement = null;
+                    }
+                    if (this.width < 12) return false;
+                    return true;
+                }
+
+                if (this.state === 'laughing') {
+                    this.laughTimer--;
+                    this.y += Math.sin(this.laughTimer * 0.15) * 1.5;
+                    this.updatePosition();
+                    
+                    if (this.laughTimer <= 0) {
+                        this.state = 'alive';
+                        if (this.laughElement) {
+                            this.laughElement.remove();
+                            this.laughElement = null;
+                        }
+                    }
+                    return true;
+                }
+
+                // Kamikaze-Bewegung mit Zickzack
+                if (this.isKamikaze) {
+                    this.zigzagTimer++;
+                    
+                    // Zickzack: X leicht oszillieren, Y langsam auf Hochsitz zu
+                    const zigzagOffset = Math.sin(this.zigzagTimer * 0.1) * 2;
+                    this.x += this.baseVx + zigzagOffset;
+                    
+                    // Langsam auf Hochsitz-Y zubewegen
+                    const dy = standY - this.y;
+                    this.y += dy * 0.008; // Sehr langsam nach unten
+                    
+                    // Kollision mit Jäger?
+                    const distX = Math.abs(this.x - standX);
+                    const distY = Math.abs(this.y - standY);
+                    if (distX < 50 && distY < 50) {
+                        this.state = 'hit';
+                        health--;
+                        playSound('damage');
+                        standShake = 10;
+                        addFloatingText('💥 AUTSCH!', standX, standY - 100, '#e74c3c');
+                        
+                        if (this.indicatorElement) {
+                            this.indicatorElement.remove();
+                            this.indicatorElement = null;
+                        }
+                        
+                        if (health <= 0) {
+                            setTimeout(() => gameOver(false), 500);
+                        }
+                        return false;
+                    }
+                    
+                    // Bildschirm verlassen?
+                    const screenWidth = canvas.width / (window.devicePixelRatio || 1);
+                    const screenHeight = canvas.height / (window.devicePixelRatio || 1);
+                    if (this.x < -200 || this.x > screenWidth + 200 || this.y > screenHeight + 200) {
+                        return false;
+                    }
+                } else {
+                    // Normale Bewegung
+                    this.x += this.vx + windDirection * windStrength * 0.2;
+                    
+                    const screenWidth = canvas.width / (window.devicePixelRatio || 1);
+                    if ((this.vx > 0 && this.x > screenWidth + 180) || 
+                        (this.vx < 0 && this.x < -180)) {
+                        if (!this.escaped && this.state === 'alive') {
+                            this.escaped = true;
+                            return 'escaped';
+                        }
+                        return false;
+                    }
+                }
+
+                this.updatePosition();
+                return true;
+            }
+
+            updatePosition() {
+                if (this.isKamikaze && this.state === 'alive' && !this.indicatorElement) {
+                    const indicator = document.createElement('div');
+                    indicator.className = 'kamikaze-indicator';
+                    indicator.innerHTML = '!!!';
+                    document.body.appendChild(indicator);
+                    this.indicatorElement = indicator;
+                }
+                
+                if (this.indicatorElement) {
+                    const rect = canvas.getBoundingClientRect();
+                    const scaleX = rect.width / (canvas.width / (window.devicePixelRatio || 1));
+                    const scaleY = rect.height / (canvas.height / (window.devicePixelRatio || 1));
+                    this.indicatorElement.style.left = (rect.left + this.x * scaleX - 10) + 'px';
+                    this.indicatorElement.style.top = (rect.top + (this.y - this.height/2 - 30) * scaleY) + 'px';
+                }
+                
+                if (this.laughElement) {
+                    const rect = canvas.getBoundingClientRect();
+                    const scaleX = rect.width / (canvas.width / (window.devicePixelRatio || 1));
+                    const scaleY = rect.height / (canvas.height / (window.devicePixelRatio || 1));
+                    this.laughElement.style.left = (rect.left + this.x * scaleX) + 'px';
+                    this.laughElement.style.top = (rect.top + (this.y - 60) * scaleY) + 'px';
+                }
+            }
+
+            draw() {
+                if (!images[this.imageName]) {
+                    ctx.fillStyle = '#888';
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.width/2, 0, Math.PI*2);
+                    ctx.fill();
+                    return;
+                }
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                if (this.isKamikaze && this.state === 'alive') {
+                    ctx.filter = 'hue-rotate(-30deg) saturate(150%) brightness(120%)';
+                }
+
+                if (this.vx > 0 && !this.isKamikaze) {
+                    ctx.scale(-1, 1);
+                }
+
+                if (this.hitFlash > 0) {
+                    ctx.globalAlpha = 0.5 + Math.sin(this.hitFlash * 0.5) * 0.5;
+                    this.hitFlash--;
+                }
+
+                if (this.state === 'laughing') {
+                    ctx.rotate(Math.sin(this.laughTimer * 0.2) * 0.15);
+                }
+
+                ctx.drawImage(images[this.imageName], -this.width/2, -this.height/2, this.width, this.height);
+
+                if (this.maxHealth > 1 && this.health > 0 && this.state !== 'laughing') {
+                    ctx.fillStyle = 'red';
+                    ctx.fillRect(-30, -this.height/2 - 15, 60, 8);
+                    ctx.fillStyle = '#0f0';
+                    ctx.fillRect(-30, -this.height/2 - 15, 60 * (this.health / this.maxHealth), 8);
+                }
+
+                ctx.restore();
+            }
+
+            checkHit(x, y) {
+                const dx = x - this.x;
+                const dy = y - this.y;
+                return Math.sqrt(dx*dx + dy*dy) < this.width/2;
+            }
+
+            hit() {
+                this.health--;
+                this.hitFlash = 10;
+
+                if (this.health <= 0) {
+                    this.state = 'hit';
+                    if (this.laughElement) {
+                        this.laughElement.remove();
+                        this.laughElement = null;
+                    }
+                    if (this.indicatorElement) {
+                        this.indicatorElement.remove();
+                        this.indicatorElement = null;
+                    }
+
+                    const now = Date.now();
+                    if (now - lastHitTime < 3000) {
+                        combo++;
+                        if (combo >= 2) {
+                            playSound('combo');
+                            showCombo(combo);
+                        }
+                    } else {
+                        combo = 1;
+                    }
+                    lastHitTime = now;
+
+                    const points = this.type.score * combo;
+                    score += points;
+                    animalsHunted++;
+
+                    addFloatingText(`+${points}${combo > 1 ? ' 🔥x'+combo : ''}`, this.x, this.y - 50, '#FFD700');
+                    createParticles(this.x, this.y, 12, '#FFD700');
+                    
+                    playSound(this.soundType, 0.05);
+                    playSound('hit');
+                    
+                    standShake = 4;
+                    checkLevelProgress();
+                } else {
+                    addFloatingText('💥 Nochmal!', this.x, this.y - 50, '#FFA500');
+                    playSound(this.soundType, 0.05);
+                    playSound('hit');
+                }
+            }
+
+            laugh() {
+                if (this.state === 'alive' && !this.hasLaughed) {
+                    this.state = 'laughing';
+                    this.laughTimer = 150;
+                    this.hasLaughed = true;
+                    combo = 0;
+
+                    const laughDiv = document.createElement('div');
+                    laughDiv.className = 'laugh-overlay';
+                    laughDiv.innerHTML = '😂<br>HÖHÖ!';
+                    document.body.appendChild(laughDiv);
+                    this.laughElement = laughDiv;
+                    this.updatePosition();
+
+                    playSound('laugh');
+                    setTimeout(() => playSound('laugh'), 400);
+                }
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 6;
+                this.vy = (Math.random() - 0.5) * 6;
+                this.life = 35;
+                this.color = color;
+                this.size = Math.random() * 5 + 2;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.15;
+                this.life--;
+                this.size *= 0.97;
+                return this.life > 0;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.life / 35;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class FloatingText {
+            constructor(text, x, y, color) {
+                this.text = text;
+                this.x = x;
+                this.y = y;
+                this.vy = -1.2;
+                this.life = 70;
+                this.color = color;
+            }
+
+            update() {
+                this.y += this.vy;
+                this.life--;
+                return this.life > 0;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = Math.min(1, this.life / 25);
+                ctx.font = 'bold 20px "Segoe UI", sans-serif';
+                ctx.fillStyle = this.color;
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 2;
+                ctx.textAlign = 'center';
+                ctx.strokeText(this.text, this.x, this.y);
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.restore();
+            }
+        }
+
+        function createParticles(x, y, count, color) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+        }
+
+        function addFloatingText(text, x, y, color) {
+            floatingTexts.push(new FloatingText(text, x, y, color));
+        }
+
+        function showWarningText(text) {
+            const warning = document.createElement('div');
+            warning.className = 'warning-text';
+            warning.innerHTML = text;
+            document.body.appendChild(warning);
+            setTimeout(() => warning.remove(), 2000);
+        }
+
+        function showEscapedWarning() {
+            const warning = document.createElement('div');
+            warning.className = 'escaped-warning';
+            warning.innerHTML = '💔 Entkommen!';
+            document.body.appendChild(warning);
+            setTimeout(() => warning.remove(), 1000);
+        }
+
+        function showCombo(count) {
+            const display = document.getElementById('comboDisplay');
+            document.getElementById('comboNum').textContent = count;
+            display.classList.add('show');
+            setTimeout(() => display.classList.remove('show'), 1000);
+        }
+
+        function updateWind() {
+            if (gameTime % 500 === 0) {
+                windDirection = Math.floor(Math.random() * 3) - 1;
+                windStrength = Math.random() * 1 + 0.3;
+                const arrows = ['⬅️', '⬆️', '➡️'];
+                document.getElementById('windBox').textContent = arrows[windDirection + 1];
+            }
+        }
+
+        function drawBackground() {
+            if (images.background) {
+                const bg = images.background;
+                const screenWidth = canvas.width / (window.devicePixelRatio || 1);
+                const screenHeight = canvas.height / (window.devicePixelRatio || 1);
+                const scale = Math.max(screenWidth / bg.width, screenHeight / bg.height);
+                const w = bg.width * scale;
+                const h = bg.height * scale;
+                const x = (screenWidth - w) / 2;
+                const y = (screenHeight - h) / 2;
+                ctx.drawImage(bg, x, y, w, h);
+            }
+        }
+
+        function drawHunter() {
+            if (!images.hunter) {
+                ctx.fillStyle = '#8B4513';
+                ctx.beginPath();
+                ctx.arc(standX, standY - 48, 36, 0, Math.PI*2);
+                ctx.fill();
+                return;
+            }
+
+            let shakeX = 0;
+            let shakeY = 0;
+            if (standShake > 0) {
+                shakeX = (Math.random() - 0.5) * standShake;
+                shakeY = (Math.random() - 0.5) * standShake;
+                standShake *= 0.9;
+                if (standShake < 0.5) standShake = 0;
+            }
+
+            ctx.save();
+            ctx.translate(standX + shakeX, standY + shakeY);
+
+            if (invulnerable > 0 && Math.floor(invulnerable / 10) % 2 === 0) {
+                ctx.globalAlpha = 0.5;
+            }
+
+            const hunter = images.hunter;
+            const screenWidth = canvas.width / (window.devicePixelRatio || 1);
+            const screenHeight = canvas.height / (window.devicePixelRatio || 1);
+            
+            const scale = Math.min(screenWidth * 0.54 / hunter.width, screenHeight * 0.48 / hunter.height);
+            const w = hunter.width * scale;
+            const h = hunter.height * scale;
+
+            ctx.drawImage(hunter, -w/2, -h, w, h);
+            ctx.restore();
+        }
+
+        function showMuzzleFlash() {
+            const flash = document.createElement('div');
+            flash.className = 'muzzle-flash';
+            const rect = canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            const scaleX = rect.width / (canvas.width / dpr);
+            const scaleY = rect.height / (canvas.height / dpr);
+            
+            // 15% weiter hoch (standY - 120 statt -90)
+            flash.style.left = (rect.left + (standX + 20) * scaleX) + 'px';
+            flash.style.top = (rect.top + (standY - 120) * scaleY) + 'px';
+            
+            document.body.appendChild(flash);
+            setTimeout(() => flash.remove(), 100);
+        }
+
+        function checkLevelProgress() {
+            if (score >= targetScore) {
+                levelComplete();
+            }
+        }
+
+        function levelComplete() {
+            gameRunning = false;
+            playSound('levelUp');
+            document.querySelectorAll('.laugh-overlay, .kamikaze-indicator').forEach(el => el.remove());
+            
+            document.getElementById('completedLevel').textContent = currentLevel;
+            document.getElementById('levelScore').textContent = score;
+            document.getElementById('animalsHunted').textContent = animalsHunted;
+            document.getElementById('livesLeft').textContent = health;
+            
+            document.getElementById('levelCompleteScreen').classList.remove('hidden');
+            document.getElementById('gameUI').style.display = 'none';
+        }
+
+        function nextLevel() {
+            currentLevel++;
+            levelSpeedMultiplier += 0.2;
+            spawnRate = Math.max(150, spawnRate - 30);
+            // NEU: +5 Tiere pro Level
+            targetScore += 2500 + (currentLevel * 500);
+            
+            animals = [];
+            particles = [];
+            floatingTexts = [];
+            combo = 0;
+            ammo = maxAmmo;
+            windDirection = 0;
+            animalsHunted = 0;
+            animalsEscaped = 0;
+            
+            health = Math.min(5, health + 1);
+            
+            document.getElementById('levelCompleteScreen').classList.add('hidden');
+            document.getElementById('gameUI').style.display = 'flex';
+            document.getElementById('levelNum').textContent = currentLevel;
+            document.getElementById('targetScore').textContent = targetScore;
+            
+            gameRunning = true;
+            gameTime = 0;
+            gameLoop();
+        }
+
+        function gameOver(won = false) {
+            gameRunning = false;
+            document.querySelectorAll('.laugh-overlay, .kamikaze-indicator').forEach(el => el.remove());
+
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('waidmannsheil_highscore', highScore);
+            }
+            
+            const title = document.getElementById('gameOverTitle');
+            if (won) {
+                title.innerHTML = '🏆<br>Meister<br>jäger!';
+            } else {
+                title.innerHTML = '🍺<br>O\'zapft<br>is!';
+            }
+            
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('highScore').textContent = highScore;
+            document.getElementById('finalLevel').textContent = currentLevel;
+            document.getElementById('finalAnimals').textContent = animalsHunted;
+            document.getElementById('gameOverStats').style.display = 'block';
+            
+            document.getElementById('gameOverScreen').classList.remove('hidden');
+            document.getElementById('gameUI').style.display = 'none';
+            
+            playSound('gameOver');
+        }
+
+        function updateAmmoDisplay() {
+            for (let i = 1; i <= 5; i++) {
+                const bullet = document.getElementById('bullet' + i);
+                if (bullet) {
+                    bullet.classList.toggle('active', i <= ammo);
+                }
+            }
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            gameTime++;
+            if (invulnerable > 0) invulnerable--;
+
+            const screenWidth = canvas.width / (window.devicePixelRatio || 1);
+            const screenHeight = canvas.height / (window.devicePixelRatio || 1);
+
+            ctx.clearRect(0, 0, screenWidth, screenHeight);
+
+            drawBackground();
+            updateWind();
+
+            if (gameTime % spawnRate === 0 && animals.length < 2 + Math.floor(currentLevel / 2)) {
+                animals.push(new Animal());
+            }
+
+            animals = animals.filter(animal => {
+                const result = animal.update();
+                
+                if (result === 'escaped') {
+                    health--;
+                    animalsEscaped++;
+                    showEscapedWarning();
+                    playSound('damage');
+                    addFloatingText('💔 Entkommen!', animal.x, animal.y - 50, '#e74c3c');
+                    
+                    if (health <= 0) {
+                        setTimeout(() => gameOver(false), 500);
+                    }
+                    return false;
+                }
+                
+                if (result === true) animal.draw();
+                return result === true;
+            });
+
+            particles = particles.filter(p => {
+                const alive = p.update();
+                if (alive) p.draw();
+                return alive;
+            });
+
+            floatingTexts = floatingTexts.filter(t => {
+                const alive = t.update();
+                if (alive) t.draw();
+                return alive;
+            });
+
+            drawHunter();
+
+            document.getElementById('score').textContent = score;
+            updateAmmoDisplay();
+
+            let hearts = '';
+            for (let i = 0; i < 5; i++) hearts += i < health ? '❤️' : '🖤';
+            document.getElementById('healthBar').textContent = hearts;
+
+            const reloadBtn = document.getElementById('reloadBtn');
+            if (ammo >= maxAmmo) {
+                reloadBtn.classList.add('disabled');
+                reloadBtn.innerHTML = '✅ VOLL';
+            } else {
+                reloadBtn.classList.remove('disabled');
+                reloadBtn.innerHTML = '🔄 LADEN';
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function shoot(x, y) {
+            if (!gameRunning) return;
+
+            if (ammo > 0) {
+                ammo--;
+                playSound('shoot');
+                showMuzzleFlash();
+                createParticles(standX, standY - 48, 8, '#FFA500');
+
+                let hit = false;
+                for (let animal of animals) {
+                    if (animal.checkHit(x, y)) {
+                        animal.hit();
+                        hit = true;
+                        break;
+                    }
+                }
+
+                if (!hit) {
+                    let nearby = animals.filter(a => {
+                        const dist = Math.abs(a.x - x) + Math.abs(a.y - y);
+                        return dist < 216 && a.state === 'alive';
+                    });
+
+                    if (nearby.length > 0) {
+                        nearby.sort((a, b) => {
+                            const distA = Math.abs(a.x - x) + Math.abs(a.y - y);
+                            const distB = Math.abs(b.x - x) + Math.abs(b.y - y);
+                            return distA - distB;
+                        });
+                        nearby[0].laugh();
+
+                        for (let i = 1; i < Math.min(nearby.length, 2); i++) {
+                            setTimeout(() => {
+                                if (nearby[i] && nearby[i].state === 'alive') {
+                                    nearby[i].laugh();
+                                }
+                            }, i * 400);
+                        }
+                    }
+
+                    addFloatingText('💨 Wuusch!', x, y, '#fff');
+                }
+
+                standShake = 3;
+            } else {
+                playSound('empty');
+                addFloatingText('🔫 LEER!', x, y, '#e74c3c');
+            }
+        }
+
+        function reload() {
+            if (ammo < maxAmmo) {
+                ammo = maxAmmo;
+                playSound('reload');
+                addFloatingText('🔄 NACHGELADEN!', standX, standY - 144, '#2ecc71');
+            }
+        }
+
+        async function startGame(resetLevel = true) {
+            const loadPromise = loadAllAssets();
+            const timeoutPromise = new Promise(r => setTimeout(() => r(false), 5000));
+
+            try {
+                await Promise.race([loadPromise, timeoutPromise]);
+            } catch(e) {
+                console.log('Asset loading issue, continuing anyway');
+            }
+
+            initAudio();
+
+            if (resetLevel) {
+                score = 0;
+                currentLevel = 1;
+                targetScore = 3000;
+                levelSpeedMultiplier = 1.2;
+                spawnRate = 270;
+                health = 5;
+                hogCounter = 0;
+            }
+            
+            ammo = 5;
+            combo = 0;
+            gameTime = 0;
+            invulnerable = 0;
+            animals = [];
+            particles = [];
+            floatingTexts = [];
+            windDirection = 0;
+            animalsHunted = 0;
+            animalsEscaped = 0;
+
+            document.querySelectorAll('.laugh-overlay, .kamikaze-indicator').forEach(el => el.remove());
+            document.getElementById('menuScreen').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('levelCompleteScreen').classList.add('hidden');
+            document.getElementById('gameUI').style.display = 'flex';
+            
+            document.getElementById('levelNum').textContent = currentLevel;
+            document.getElementById('targetScore').textContent = targetScore;
+
+            const screenWidth = canvas.width / (window.devicePixelRatio || 1);
+            const screenHeight = canvas.height / (window.devicePixelRatio || 1);
+
+            standX = screenWidth / 2;
+            standY = screenHeight * 0.90;
+            safeZoneY = screenHeight * 0.98;
+
+            gameRunning = true;
+            gameLoop();
+        }
+
+        document.getElementById('startBtn').addEventListener('click', () => {
+            startGame(true);
+        });
+        
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            startGame(true);
+        });
+        
+        document.getElementById('nextLevelBtn').addEventListener('click', () => {
+            nextLevel();
+        });
+        
+        document.getElementById('reloadBtn').addEventListener('click', reload);
+
+        document.getElementById('soundToggle').addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundToggle').textContent = soundEnabled ? '🔊' : '🔇';
+        });
+
+        canvas.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            const x = (e.clientX - rect.left);
+            const y = (e.clientY - rect.top);
+
+            if (y > (canvas.height / dpr) * 0.98) return;
+
+            shoot(x, y);
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            if (e.scale !== 1) e.preventDefault();
+        }, { passive: false });
+
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (e) => {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) e.preventDefault();
+            lastTouchEnd = now;
+        }, false);
+    </script>
+</body>
+</html>
