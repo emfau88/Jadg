@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Waidmannsheil – Endless Jagd</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            background: #1a3009;
+            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+        }
+
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .top-ui {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 8px;
+            pointer-events: auto;
+        }
+
+        .left-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .score-box {
+            background: linear-gradient(145deg, #8B4513, #A0522D);
+            border: 2px solid #FFD700;
+            border-radius: 10px;
+            padding: 6px 12px;
+            color: #FFD700;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .level-box {
+            background: linear-gradient(145deg, #2c3e50, #34495e);
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            padding: 4px 8px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .target-box {
+            background: linear-gradient(145deg, #27ae60, #2ecc71);
+            border: 1px solid #f39c12;
+            border-radius: 6px;
+            padding: 3px 6px;
+            color: #fff;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .health-bar {
+            font-size: 16px;
+            letter-spacing: -2px;
+        }
+
+        .wind-box {
+            background: rgba(255,255,255,0.9);
+            border: 2px solid #3498db;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .bottom-ui {
+            height: 10%;
+            background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            pointer-events: auto;
+            gap: 10px;
+        }
+
+        .ammo-display-bottom {
+            background: linear-gradient(145deg, #2c3e50, #34495e);
+            border: 1px solid #95a5a6;
+            border-radius: 8px;
+            padding: 4px 8px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .ammo-bullet {
+            font-size: 10px;
+            opacity: 0.3;
+            transition: opacity 0.2s;
+        }
+
+        .ammo-bullet.active {
+            opacity: 1;
+        }
+
+        .reload-btn {
+            background: linear-gradient(145deg, #e67e22, #d35400);
+            border: 2px solid #f39c12;
+            border-radius: 10px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+            transition: all 0.1s;
+            font-family: inherit;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .reload-btn:active {
+            transform: scale(0.95);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .reload-btn.disabled {
+            opacity: 0.6;
+        }
+
+        .menu-screen, .game-over-screen, .level-complete-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #2d5016 0%, #1a3009 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            z-index: 100;
+            pointer-events: auto;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .menu-screen.hidden, .game-over-screen.hidden, .level-complete-screen.hidden {
+            display: none;
+        }
+
+        .game-title {
+            font-size: 42px;
+            color: #FFD700;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
+            margin-top: 10px;
+            margin-bottom: 5px;
+            text-align: center;
+            line-height: 1.1;
+            font-weight: bold;
+        }
+
+        .game-subtitle {
+            font-size: 18px;
+            color: #90EE90;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+            font-style: italic;
+        }
+
+        .start-btn, .restart-btn, .next-level-btn {
+            background: linear-gradient(145deg, #FFD700, #FFA500);
+            border: 3px solid #FF8C00;
+            border-radius: 20px;
+            padding: 15px 40px;
+            font-size: 22px;
+            font-weight: bold;
+            color: #8B4513;
+            cursor: pointer;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.5);
+            transition: all 0.2s;
+            font-family: inherit;
+            margin: 10px 0;
+        }
+
+        .start-btn:active, .restart-btn:active, .next-level-btn:active {
+            transform: scale(0.95);
+        }
+
+        .next-level-btn {
+            background: linear-gradient(145deg, #2ecc71, #27ae60);
+            border-color: #1e8449;
+            color: #fff;
+        }
+
+        .instructions {
+            margin-top: 15px;
+            color: #fff;
+            text-align: left;
+            font-size: 14px;
+            line-height: 1.6;
+            padding: 15px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 15px;
+            max-width: 95%;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .instructions h3 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #FFD700;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .instructions ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .instructions li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+            font-size: 13px;
+        }
+
+        .instructions li:before {
+            content: "▶";
+            position: absolute;
+            left: 0;
+            color: #FFD700;
+            font-size: 12px;
+        }
+
+        .instructions strong {
+            color: #FFD700;
+        }
+
+        .orientation-hint {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255,215,0,0.15);
+            border: 2px dashed #FFD700;
+            border-radius: 15px;
+            text-align: center;
+            color: #fff;
+            max-width: 90%;
+        }
+
+        .orientation-hint h4 {
+            color: #FFD700;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .phone-icon {
+            font-size: 32px;
+            margin: 10px 0;
+            display: inline-block;
+            animation: rotatePhone 3s ease-in-out infinite;
+        }
+
+        @keyframes rotatePhone {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(90deg); }
+            50% { transform: rotate(90deg); }
+            75% { transform: rotate(0deg); }
+        }
+
+        .orientation-hint p {
+            font-size: 12px;
+            margin-top: 8px;
+            opacity: 0.9;
+        }
+
+        .final-score {
+            font-size: 42px;
+            color: #FFD700;
+            margin: 10px 0;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+        }
+
+        .high-score {
+            font-size: 18px;
+            color: #90EE90;
+            margin-bottom: 20px;
+        }
+
+        .level-stats {
+            background: rgba(0,0,0,0.4);
+            border-radius: 15px;
+            padding: 15px;
+            margin: 10px 0;
+            text-align: center;
+            color: #fff;
+            border: 2px solid rgba(255,215,0,0.3);
+        }
+
+        .level-stats h3 {
+            color: #FFD700;
+            margin-bottom: 8px;
+            font-size: 20px;
+        }
+
+        .sound-toggle {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.7);
+            border: 2px solid #fff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 101;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .combo-display {
+            position: absolute;
+            top: 35%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 42px;
+            font-weight: bold;
+            color: #e74c3c;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
+            pointer-events: none;
+            opacity: 0;
+            z-index: 50;
+            text-align: center;
+        }
+
+        .combo-display.show {
+            animation: comboAnim 1s ease-out;
+        }
+
+        @keyframes comboAnim {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.3); }
+            80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .laugh-overlay {
+            position: absolute;
+            font-size: 28px;
+            font-weight: bold;
+            color: #e74c3c;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
+            pointer-events: none;
+            z-index: 60;
+            animation: laughAnim 0.5s ease-in-out infinite;
+        }
+
+        @keyframes laughAnim {
+            0%, 100% { transform: rotate(-10deg) scale(1); }
+            50% { transform: rotate(10deg) scale(1.1); }
+        }
+
+        .escaped-warning {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 32px;
+            font-weight: bold;
+            color: #e74c3c;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
+            pointer-events: none;
+            z-index: 55;
+            animation: warningPulse 1s ease-out;
+        }
+
+        @keyframes warningPulse {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .muzzle-flash {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, #ffff00 0%, #ff8800 40%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 45;
+            animation: flashAnim 0.1s ease-out forwards;
+        }
+
+        @keyframes flashAnim {
+            0% { transform: scale(0.5); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        .kamikaze-indicator {
+            position: absolute;
+            font-size: 24px;
+            font-weight: bold;
+            color: #e74c3c;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
+            pointer-events: none;
+            z-index: 65;
+            animation: pulseIndicator 0.5s ease-in-out infinite;
+        }
+
+        @keyframes pulseIndicator {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+
+        .warning-text {
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            font-weight: bold;
+            color: #e74c3c;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
+            pointer-events: none;
+            z-index: 70;
+            animation: warningTextAnim 2s ease-out;
+        }
+
+        @keyframes warningTextAnim {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        @media (orientation: landscape) {
+            .game-title {
+                font-size: 36px;
+                margin-top: 5px;
+            }
+            .instructions {
+                font-size: 12px;
+                padding: 10px;
+            }
+            .orientation-hint {
+                margin-top: 10px;
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="canvas"></canvas>
+
+        <div class="ui-layer" id="gameUI" style="display: none;">
+            <div class="top-ui">
+                <div class="left-stats">
+                    <div class="stat-row">
+                        <div class="score-box">🏆 <span id="score">0</span></div>
+                        <div class="wind-box" id="windBox">💨</div>
+                    </div>
+                    <div class="stat-row">
+                        <div class="health-bar" id="healthBar">❤️❤️❤️❤️❤️</div>
+                    </div>
+                    <div class="stat-row">
+                        <div class="level-box">Lv<span id="levelNum">1</span></div>
+                        <div class="target-box">Ziel: <span id="targetScore">3000</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="combo-display" id="comboDisplay">
+                🔥 COMBO x<span id="comboNum">2</span>!
+            </div>
+
+            <div class="bottom-ui">
+                <div class="ammo-display-bottom" id="ammoDisplayBottom">
+                    <span class="ammo-bullet active" id="bullet1">🔴</span>
+                    <span class="ammo-bullet active" id="bullet2">🔴</span>
+                    <span class="ammo-bullet active" id="bullet3">🔴</span>
+                    <span class="ammo-bullet active" id="bullet4">🔴</span>
+                    <span class="ammo-bullet active" id="bullet5">🔴</span>
+                </div>
+                <button class="reload-btn" id="reloadBtn">🔄 LADEN</button>
+            </div>
+        </div>
+
+        <button class="sound-toggle" id="soundToggle">🔊</button>
+
+        <div class="menu-screen" id="menuScreen">
+            <div class="game-title">🦌<br>Waidmanns<br>heil</div>
+            <div class="game-subtitle">Hochsitz-Chaos im Allgäu 🏔️</div>
+            <button class="start-btn" id="startBtn">🎯 Los geht's!</button>
+
+            <div class="instructions">
+                <h3>🎮 So geht's:</h3>
+                <ul>
+                    <li>Tippe auf Tiere zum Schießen</li>
+                    <li>Beachte den Wind 💨</li>
+                    <li>🔄 rechtzeitig nachladen!</li>
+                    <li>Schnelle Treffer = Combo 🔥</li>
+                    <li>Nicht entkommen lassen! 💔</li>
+                    <li>⚠️ Achtung: Kamikaze-Schweine!</li>
+                </ul>
+            </div>
+
+            <div class="orientation-hint">
+                <h4>📱 Tipp für das beste Erlebnis</h4>
+                <div class="phone-icon">📱</div>
+                <p>Halte dein Handy <strong>quer</strong> für mehr Übersicht!</p>
+            </div>
+        </div>
+
+        <div class="level-complete-screen hidden" id="levelCompleteScreen">
+            <div class="game-title">🎉<br>Level<br>geschafft!</div>
+            <div class="level-stats">
+                <h3>Level <span id="completedLevel">1</span></h3>
+                <div style="font-size: 16px; margin: 8px 0;">
+                    <span id="levelScore" style="color: #FFD700; font-size: 28px; font-weight: bold;">0</span> Punkte
+                </div>
+                <div style="font-size: 12px; color: #90EE90;">
+                    Erlegt: <span id="animalsHunted">0</span> | Leben: <span id="livesLeft">0</span>/5
+                </div>
+            </div>
+            <button class="next-level-btn" id="nextLevelBtn">➡️ Weiter</button>
+        </div>
+
+        <div class="game-over-screen hidden" id="gameOverScreen">
+            <div class="game-title" id="gameOverTitle">🍺<br>O'zapft<br>is!</div>
+            <div class="final-score" id="finalScore">0</div>
+            <div class="high-score">🏆 <span id="highScore">0</span></div>
+            <div class="level-stats" id="gameOverStats" style="display: none;">
+                <div style="font-size: 14px;">
+                    Level <span id="finalLevel">1</span> | Tiere: <span id="finalAnimals">0</span>
+                </div>
+            </div>
+            <button class="restart-btn" id="restartBtn">🔄 Nochmal!</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
